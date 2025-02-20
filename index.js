@@ -6,7 +6,7 @@ import mongoose from 'mongoose'
 import router from './routers/router.js'
 
 dotenv.config()
-const PORT = process.env.PORT || 4848
+const PORT = process.env.PORT || 80
 const DB_URL = process.env.MONGO_URI
 
 const app = express()
