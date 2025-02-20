@@ -5,8 +5,6 @@ class ControllerFetch {
         try {
             const params = req.query
             const body = req.body
-
-            // console.log(body)
             
             const user = await ServiceFetch.getWhatsApp(body)
             res.status(200).json(user)
