@@ -8,8 +8,18 @@ const USERBOX_TOKEN = process.env.USERBOX_TOKEN
 // console.log(USERBOX_TOKEN)
 
 class ServiceFetch {
-    async getWhatsApp(body) {
-        const { phone } = body
+    async getPhoneInfo(params) {
+        const { phone } = params
+        const url = `https://num.voxlink.ru/get/?num=${phone}`
+
+        const response = await fetch(url)
+            .then((res) => res.json())
+
+        return response
+    }
+
+    async getWhatsApp(params) {
+        const { phone } = params
         const url = `https://wappi.pro/api/sync/contact/check?profile_id=${WAPPIPRO_WHATSAPP_ID}&phone=${phone}`
         const headers = { 'Authorization': WAPPIPRO_TOKEN }
 
@@ -19,8 +29,8 @@ class ServiceFetch {
         return response
     }
 
-    async getTelegram(body) {
-        const { phone } = body
+    async getTelegram(params) {
+        const { phone } = params
         const url = `https://wappi.pro/tapi/sync/contact/get?profile_id=${WAPPIPRO_TELEGRAM_ID}&recipient=${phone}`
         const headers = { 'Authorization': WAPPIPRO_TOKEN }
 
@@ -30,9 +40,9 @@ class ServiceFetch {
         return response
     }
 
-    async getUserBox(body) {
-        const { phone } = body
-        const apiUrl = `https://api.usersbox.ru/v1/search?q=${encodeURIComponent(phone)}`
+    async getUserBox(params) {
+        const { phone } = params
+        const apiUrl = `https://api.usersbox.ru/v1/search?q=${phone}`
         const proxy = 'https://thingproxy.freeboard.io/fetch/'
         const url = proxy + encodeURIComponent(apiUrl)
 

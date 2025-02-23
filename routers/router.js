@@ -16,6 +16,7 @@ router.get('/customers', ControllerCustomers.getAll) // DEV
 router.post('/customer', ControllerCustomers.createOne) // DEV
 
 // Запросы
+router.get('/fetch/phoneinfo', ControllerFetch.getPhoneInfo)
 router.get('/fetch/whatsapp', ControllerFetch.getWhatsApp)
 router.get('/fetch/telegram', ControllerFetch.getTelegram)
 router.get('/fetch/userbox', ControllerFetch.getUserBox)
