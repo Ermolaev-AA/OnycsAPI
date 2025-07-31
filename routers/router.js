@@ -1,33 +1,40 @@
 import Router from 'express'
-import ControllerCompanies from '../controllers/companies.js'
+import ControllerCompanies from '../controllers/companies/index.js'
 import ControllerCustomers from '../controllers/customers.js'
 import ControllerFetch from '../controllers/fetch.js'
 
 const router = new Router
 
-// Компании
-router.get('/company')
-router.get('/companies', ControllerCompanies.getAll) // DEV
-router.post('/company', ControllerCompanies.createOne) // DEV
+// Сompanies
+router.get('/companies/:id', ControllerCompanies.getOne)
+router.get('/companies', ControllerCompanies.getAll)
 
-// Клиенты
+router.post('/companies', ControllerCompanies.create)
+
+router.patch('/companies', ControllerCompanies.update)
+router.delete('/companies/:id', ControllerCompanies.deleteOne)
+
+// Customer
 router.get('/customer', ControllerCustomers.getOne) // DEV
 router.get('/customers', ControllerCustomers.getAll) // DEV
 router.post('/customer', ControllerCustomers.createOne) // DEV
 
-// Запросы
-router.get('/fetch/phoneinfo', ControllerFetch.getPhoneInfo)
-router.get('/fetch/whatsapp', ControllerFetch.getWhatsApp)
-router.get('/fetch/telegram', ControllerFetch.getTelegram)
-router.get('/fetch/userbox', ControllerFetch.getUserBox)
+// OLD
+// /// // // //
 
-// Токены
-router.get('/bearer')
-router.get('/bearers')
+// // Запросы
+// router.get('/fetch/phoneinfo', ControllerFetch.getPhoneInfo)
+// router.get('/fetch/whatsapp', ControllerFetch.getWhatsApp)
+// router.get('/fetch/telegram', ControllerFetch.getTelegram)
+// router.get('/fetch/userbox', ControllerFetch.getUserBox)
 
-// Фиксация
-router.get('/fixation')
-router.get('/fixations')
+// // Токены
+// router.get('/bearer')
+// router.get('/bearers')
+
+// // Фиксация
+// router.get('/fixation')
+// router.get('/fixations')
 
 // router.get('/leads', ControllerLeads.getAll)
 // router.get('/leads/:id')
