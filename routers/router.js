@@ -1,8 +1,6 @@
 import Router from 'express'
 import Controller from '../controllers/index.js'
 
-// console.log(Controller)
-
 const router = new Router
 
 // Сompanies
@@ -13,11 +11,12 @@ router.patch('/companies', Controller.Companies.update)
 router.delete('/companies/:id', Controller.Companies.deleteOne)
 
 // Customers
-router.get('/customers/:id', Controller.Customers.getOne) // DEV
-router.get('/customers', Controller.Customers.getAll) // DEV
-router.post('/customers', Controller.Customers.create ) // DEV
-router.patch('/customers' )
-router.delete('/customers/:id' )
+router.get('/customers/:id', Controller.Customers.getOne)
+router.get('/customers', Controller.Customers.getAll)
+router.post('/customers', Controller.Customers.create)
+router.post('/customers/send/complaint', Controller.Customers.sendСomplaint)
+// router.patch('/customers' ) // DEV
+// router.delete('/customers/:id' ) // DEV
 
 // GET
 router.get('/get/phone/report', Controller.getPhoneReport)
