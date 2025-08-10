@@ -43,12 +43,13 @@ export const create = async (req, res) => {
 
 export const sendСomplaint = async (req, res) => {
     try {
-        const { body } = req
-        const phone = Formatted.phone(body?.phone)
+        const { body, params } = req
+        const phone = body?.phone || params?.phone
+        const num = Formatted.phone(phone)
 
-        if (!phone) return res.status(400).json({ error: 'The required «phone» parameter is missing!' })
+        if (!num) return res.status(400).json({ error: 'The required «phone» parameter is missing!' })
 
-        const result = await ServiceCustomers.sendСomplaint(phone)
+        const result = await ServiceCustomers.sendСomplaint(num)
         res.status(200).json(result)
     } catch (error) {
         res.status(500).json({ error: error.message })

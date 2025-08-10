@@ -14,9 +14,11 @@ router.delete('/companies/:id', Controller.Companies.deleteOne)
 router.get('/customers/:id', Controller.Customers.getOne)
 router.get('/customers', Controller.Customers.getAll)
 router.post('/customers', Controller.Customers.create)
-router.post('/customers/send/complaint', Controller.Customers.sendСomplaint)
 // router.patch('/customers' ) // DEV
 // router.delete('/customers/:id' ) // DEV
+
+router.post('/customers/send/complaint', Controller.Customers.sendСomplaint)
+router.get('/customers/send/complaint', Controller.Customers.sendСomplaint)
 
 // GET
 router.get('/get/phone/report', Controller.getPhoneReport)
