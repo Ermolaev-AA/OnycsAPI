@@ -10,8 +10,8 @@ export const create = async (req, res) => {
         const owner_id = body?.owner_id
         const name = body?.name
         const phone = Formatted.phone(body?.phone)
-        const url = headers.referer || headers.origin || body?.url
-        const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || body?.ip
+        const url = body?.url || headers.referer || headers.origin
+        const ip = body?.ip || req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress
 
         if (!name) return res.status(400).json({ error: 'The required «name» parameter is missing!' })
         if (!phone) return res.status(400).json({ error: 'The required «phone» parameter is missing!' })
@@ -22,9 +22,11 @@ export const create = async (req, res) => {
         if (!Validation.isURL(url)) return res.status(400).json({ error: 'Invalid URL!' })
 
         const objUrl = new URL(url)
+        const strCookie = body?.cookie || headers?.cookie
+
         const domain = Formatted.domainRemovePrefixWWW(objUrl?.hostname)
         const params = Object.fromEntries(objUrl.searchParams.entries())
-        const cookies = headers?.cookie ? Utils.parseCookies(headers.cookie) : {}
+        const cookies = Utils.parseCookies(strCookie)
         const connect_report = {
             user_ip: ip,
             user_agent: headers['user-agent']
