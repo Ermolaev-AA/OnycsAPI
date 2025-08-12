@@ -81,7 +81,9 @@ export const sendNewlead = async (req, res) => {
         console.log('BODY ➜', body)
         console.log('QUERY ➜', query)
 
-        res.status(200).json()
+
+        const result = { params, body, query }
+        res.status(200).json(result)
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
