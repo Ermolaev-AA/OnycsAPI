@@ -55,3 +55,34 @@ export const sendСomplaint = async (req, res) => {
         res.status(500).json({ error: error.message })
     }
 }
+
+export const sendDeal = async (req, res) => {
+    try {
+        const { body, params } = req
+        const id = body?.id || params?.id
+        const dealId = body?.crm_deal_id || params?.crm_deal_id
+        const contactId = body?.crm_contact_id || params?.crm_contact_id
+
+        if (!id) return res.status(400).json({ error: 'The required «id» parameter is missing!' })
+        if (!dealId) return res.status(400).json({ error: 'The required «crm_deal_id» parameter is missing!' })
+
+        const result = await ServiceCustomers.sendDeal({ id, dealId, contactId })
+        res.status(200).json(result)
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}
+
+export const sendNewlead = async (req, res) => {
+    try {
+        const { body, params, query } = req
+
+        console.log('PARAMS ➜', params)
+        console.log('BODY ➜', body)
+        console.log('QUERY ➜', query)
+
+        res.status(200).json()
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}

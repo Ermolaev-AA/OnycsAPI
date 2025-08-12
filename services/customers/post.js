@@ -3,6 +3,7 @@ import ModelCustomers from '../../models/customers.js'
 import ModelCompanies from '../../models/companies.js'
 import ServiceIPQS from '../external/ipqs/index.js'
 import { getPhoneReport } from '../get.js'
+import { trusted } from 'mongoose'
 
 export const create = async (body) => {
     try {
@@ -122,6 +123,23 @@ export const sendСomplaint = async (phone) => {
     }
 }
 
+export const sendDeal = async (body) => {
+    try {
+        const { id, dealId, contactId } = body
+        const customer = await ModelCustomers.findOne({ _id: id })
+
+        if (!customer) return { error: `Customer with id ${id} not found!` }
+
+        customer.crm_deal_id = dealId
+        customer.crm_contact_id = contactId
+        await customer.save()
+
+        return { success: true, id: customer._id, crm_deal_id: customer.crm_deal_id, crm_contact_id: customer.crm_contact_id }
+    } catch (error) {
+        return { error: error.message }
+    }
+}
+
 /**
  * Правила:
  * 1) Если whatsapp_exists = true И fraud_score < 50 → is_fraud = false (единственное исключение).
@@ -148,9 +166,13 @@ function evaluateFraud({ dupCount3m, latestGlobalDoc, contact_report, ipqs_repor
         return { is_fraud: true, reason: 'latest_duplicate_complaints>5' }
     }
 
-    // Исключение: только здесь разрешено false
-    if (waExists && Number.isFinite(fraudScore) && fraudScore < 50) {
-        return { is_fraud: false, reason: 'whatsapp_exists && fraud_score<50' }
+    // Исключение: только здесь разрешено false 
+    // if (waExists && Number.isFinite(fraudScore) && fraudScore < 50) {
+    //     return { is_fraud: false, reason: 'whatsapp_exists && fraud_score<50' }
+    // }
+
+    if (waExists) {
+        return { is_fraud: false, reason: 'whatsapp_exists' }
     }
 
     // По твоему ТЗ — "во всех остальных случаях true"

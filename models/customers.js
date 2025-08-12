@@ -5,6 +5,8 @@ const Customers = new mongoose.Schema(
         // ID и отношения
         _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
         owner_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Companies', required: true },
+        crm_deal_id: { type: String }, // id сделки в CRM системе
+        crm_contact_id: { type: String }, // id контакта в CRM системе
         // Field
         name: { type: String, required: true }, // Имя клиента *
         phone: { type: String, required: true }, // Телефон клиента *

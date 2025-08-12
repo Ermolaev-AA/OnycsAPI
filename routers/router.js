@@ -18,6 +18,10 @@ router.post('/customers', Controller.Customers.create)
 // router.delete('/customers/:id' ) // DEV
 
 router.post('/customers/send/complaint', Controller.Customers.sendСomplaint)
+router.post('/customers/send/deal')
+router.post('/customers/send/newlead', Controller.Customers.sendNewlead)
+
+// DEL
 router.get('/customers/send/complaint', Controller.Customers.sendСomplaint)
 
 // GET
