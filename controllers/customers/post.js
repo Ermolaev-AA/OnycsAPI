@@ -75,14 +75,40 @@ export const sendDeal = async (req, res) => {
 
 export const sendNewlead = async (req, res) => {
     try {
-        const { body, params, query } = req
+        const { body, query } = req
+        // const formData = body?.payload?.data
+        
+        // if (!formData) return res.status(400).json({ error: 'The required «id» parameter is missing!' })
 
-        console.log('PARAMS ➜', params)
+        // const name = formData?.name
+        // const phone = Formatted.phone(formData?.phone)
+        // const url = formData?.url
+        // const ip = formData?.ip
+
+        // if (!name) return res.status(400).json({ error: 'The required «name» parameter is missing!' })
+        // if (!phone) return res.status(400).json({ error: 'The required «phone» parameter is missing!' })
+        // if (!url) return res.status(400).json({ error: 'The required «url» parameter is missing!' })
+        // if (!ip) return res.status(400).json({ error: 'The required «ip» parameter is missing!' })
+
+        // const objUrl = new URL(url)
+        // const strCookie = formData?.cookie
+
+        // const domain = Formatted.domainRemovePrefixWWW(objUrl?.hostname)
+        // const params = Object.fromEntries(objUrl.searchParams.entries())
+        // const cookies = Utils.parseCookies(strCookie)
+        // const connect_report = {
+        //     user_ip: ip,
+        //     user_agent: formData?.user-agent
+        // }
+
+        // const newLead = { name, phone, url, domain, params, cookies, connect_report }
+        // const result = await ServiceCustomers.sendNewlead(newLead)
+
+        console.log('REQUEST ➜', req)
         console.log('BODY ➜', body)
         console.log('QUERY ➜', query)
 
-
-        const result = { params, body, query }
+        const result = { body, query }
         res.status(200).json(result)
     } catch (error) {
         res.status(500).json({ error: error.message })

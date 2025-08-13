@@ -140,6 +140,14 @@ export const sendDeal = async (body) => {
     }
 }
 
+export const sendNewlead = async (lead) => {
+    try {
+        
+    } catch (error) {
+        return { error: error.message }
+    }
+}
+
 /**
  * Правила:
  * 1) Если whatsapp_exists = true И fraud_score < 50 → is_fraud = false (единственное исключение).
