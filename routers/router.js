@@ -24,6 +24,10 @@ router.post('/customers/send/newlead', Controller.Customers.sendNewlead)
 // DEL
 router.get('/customers/send/complaint', Controller.Customers.sendСomplaint)
 
+// Deals
+router.get('/deals/get/report', Controller.Deals.getReport)
+router.post('/deals/send/stage', Controller.Deals.sendStage)
+
 // GET
 router.get('/get/phone/report', Controller.getPhoneReport)
 router.get('/get/whatsapp/report', Controller.getWhatsappReport)
