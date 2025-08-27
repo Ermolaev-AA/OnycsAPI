@@ -3,30 +3,26 @@ import ModelCustomers from '../../models/customers.js'
 import ModelCompanies from '../../models/companies.js'
 import ServiceIPQS from '../external/ipqs/index.js'
 import { getPhoneReport } from '../get.js'
-import { trusted } from 'mongoose'
+
+import Formatted from '../../utils/formatted/index.js'
 
 export const create = async (body) => {
     try {
-        const phone = body.phone
-        let ownerId = body.owner_id
+        const { name, phone, url, cookie, userIP, userAgent } = body
 
-        // 1) Найти компанию при отсутствии owner_id
-        if (!ownerId) {
-            const company = await ModelCompanies.findOne({ domains: body.domain }).select('_id').lean()
-        if (!company) {
-            // console.log(`[CREATE] ❌ Company not found for domain: ${body.domain}`)
-            return { created: body, message: `Owner not found for domain: ${body.domain}` }
-        }
-            ownerId = company._id
-            // console.log(`[CREATE] ✅ Found company by domain: ${body.domain} -> ${ownerId}`)
-        }
+        const objURL = new URL(url)
+        const domain = Formatted.domainRemovePrefixWWW(objURL?.hostname)
+        const ownerID = body?.ownerID || await ModelCompanies.findOne({ domains: domain }).then(res => res._id) || '688b676870d49260494b5940'
+
+        // console.log('OWNER ID →', ownerID)s
+        // return ownerID
 
         // 2) Дубликаты: локальный факт + последний глобальный документ + кол-во за 3 месяца
-        const threeMonthsAgo = new Date()
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+        const currDate = new Date()
+        const threeMonthsAgo = currDate.setMonth(currDate.getMonth() - 3)
 
         const [hasLocalDup, latestGlobalDoc, dupCount3m] = await Promise.all([
-            ModelCustomers.exists({ owner_id: ownerId, phone }),
+            ModelCustomers.exists({ owner_id: ownerID, phone }),
             ModelCustomers.findOne({ phone })
                 .sort({ createdAt: -1 })
                 .select('createdAt is_fraud complaints contact_report connect_report')
@@ -34,32 +30,34 @@ export const create = async (body) => {
             ModelCustomers.countDocuments({ phone, createdAt: { $gte: threeMonthsAgo } })
         ])
 
-        const is_local_duplicate  = Boolean(hasLocalDup)
-        const is_global_duplicate = Boolean(latestGlobalDoc)
+        // return { hasLocalDup, latestGlobalDoc, dupCount3m }
+
+        const isLocalDuplicate  = Boolean(hasLocalDup)
+        const isGlobalDuplicate = Boolean(latestGlobalDoc)
         // console.log(`[CREATE] Duplicates → local:${is_local_duplicate}, global:${is_global_duplicate}, last3m:${dupCount3m}`)
 
         // 3) Решаем, какие отчёты брать (reuse, если свежий глобальный дубль)
-        const currIp  = body.connect_report?.user_ip || null
-        const lastIp  = latestGlobalDoc?.connect_report?.user_ip || null
+        // const currIp  = userIP || null
+        const lastUserIP  = latestGlobalDoc?.connect_report?.user_ip || null
         const freshEnough = latestGlobalDoc && latestGlobalDoc.createdAt >= threeMonthsAgo
 
         let contact_report, ipqs_report
 
-        if (is_global_duplicate && freshEnough) {
+        if (isGlobalDuplicate && freshEnough) {
             // console.log(`[CREATE] ♻ Using cached reports from latest global duplicate`)
             contact_report = latestGlobalDoc.contact_report ?? null
 
-            if (currIp && lastIp && currIp === lastIp) {
+            if (userIP && lastUserIP && userIP === lastUserIP) {
                 // console.log(`[CREATE] ♻ IP unchanged, reuse cached IPQS`)
                 ipqs_report = latestGlobalDoc.connect_report?.ipqs_report ?? null
             } else {
                 // console.log(`[CREATE] 🌐 IP changed/missing, requesting new IPQS`)
-                ipqs_report = currIp ? await ServiceIPQS.getReport(currIp) : null
+                ipqs_report = userIP ? await ServiceIPQS.getReport(userIP) : null
             }
         } else {
             // console.log(`[CREATE] 🆕 No fresh duplicate, requesting new reports`)
             const [ipqs, phoneRep] = await Promise.all([
-                currIp ? ServiceIPQS.getReport(currIp) : Promise.resolve(null),
+                userIP ? ServiceIPQS.getReport(userIP) : Promise.resolve(null),
                 getPhoneReport(phone),
             ])
 
@@ -68,18 +66,13 @@ export const create = async (body) => {
         }
 
         // 4) Оценка мошенничества по правилам
-        const { is_fraud, reason } = evaluateFraud({
-            dupCount3m,
-            latestGlobalDoc,
-            contact_report,
-            ipqs_report
-        })
+        const isFraud = evaluateFraud({ dupCount3m, latestGlobalDoc, contact_report, ipqs_report })
 
-        // console.log(`[CREATE] Fraud decision → is_fraud:${is_fraud} (reason: ${reason})`)
+        return 
 
         // 5) Собираем и создаём документ
         const customer = {
-            owner_id: ownerId,
+            owner_id: ownerID,
             name: body.name,
             phone,
             url: body.url,
@@ -87,9 +80,9 @@ export const create = async (body) => {
             params: body.params,
             cookies: body.cookies,
 
-            is_fraud,
-            is_local_duplicate,
-            is_global_duplicate,
+            is_fraud: isFraud,
+            is_local_duplicate: isLocalDuplicate,
+            is_global_duplicate: isGlobalDuplicate,
 
             connect_report: {
                 ...(body.connect_report || {}),
@@ -98,9 +91,9 @@ export const create = async (body) => {
             contact_report,
         }
 
-        const created = await ModelCustomers.create(customer)
+        // const created = await ModelCustomers.create(customer)
         // console.log(`[CREATE] ✅ Created customer ${created._id}`)
-        return created
+        return customer
     } catch (error) {
         // console.error(`[CREATE] ❌ Error creating customer: ${error.message}`)
         return { error: error.message }
@@ -140,9 +133,27 @@ export const sendDeal = async (body) => {
     }
 }
 
-export const sendNewlead = async (lead) => {
+export const sendNewlead = async (body, query) => {
     try {
-        
+        const { data } = body
+
+        const reqCustomer = Build.Customer.request({ body }, { source: 'newlead' })
+        const customer = await create(reqCustomer)
+
+        const url = query?.webhook
+        const body = {
+            ...data,
+            customer_id: customer._id,
+            // ...newlead
+        }
+
+        const result = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+
+        return result
     } catch (error) {
         return { error: error.message }
     }
@@ -164,25 +175,16 @@ function evaluateFraud({ dupCount3m, latestGlobalDoc, contact_report, ipqs_repor
     const lastIsFraud = latestGlobalDoc?.is_fraud === true
     const lastComplaints = Number(latestGlobalDoc?.complaints || 0)
 
-    if (dupCount3m > 3) {
-        return { is_fraud: true, reason: 'duplicates_last_3m>3' }
-    }
-    if (lastIsFraud) {
-        return { is_fraud: true, reason: 'latest_duplicate_is_fraud' }
-    }
-    if (lastComplaints > 5) {
-        return { is_fraud: true, reason: 'latest_duplicate_complaints>5' }
-    }
+    if (dupCount3m > 3) return true
+    if (lastIsFraud) return true
+    if (lastComplaints > 5) return true
 
     // Исключение: только здесь разрешено false 
     // if (waExists && Number.isFinite(fraudScore) && fraudScore < 50) {
     //     return { is_fraud: false, reason: 'whatsapp_exists && fraud_score<50' }
     // }
 
-    if (waExists) {
-        return { is_fraud: false, reason: 'whatsapp_exists' }
-    }
+    if (waExists) return false
 
-    // По твоему ТЗ — "во всех остальных случаях true"
-    return { is_fraud: true, reason: 'default_true' }
+    return true
 }
