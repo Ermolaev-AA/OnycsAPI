@@ -126,7 +126,7 @@ export const getReport = async (data) => {
         for (const d of dealsMeetingAgencyScheduled) {
             const row = ensure(d.responsible_id, d.responsible_name)
             if (!row) continue
-            row.meetings_developer_scheduled += 1
+            row.meetings_agency_scheduled += 1
         }
 
         // meetings
