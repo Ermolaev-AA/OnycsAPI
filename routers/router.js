@@ -5,14 +5,14 @@ const router = new Router
 
 // Сompanies
 router.get('/companies/:id', Controller.Companies.getOne)
-router.get('/companies', Controller.Companies.getAll)
+// router.get('/companies', Controller.Companies.getAll)
 router.post('/companies', Controller.Companies.create)
-router.patch('/companies', Controller.Companies.update)
-router.delete('/companies/:id', Controller.Companies.deleteOne)
+// router.patch('/companies', Controller.Companies.update)
+// router.delete('/companies/:id', Controller.Companies.deleteOne)
 
 // Customers
 router.get('/customers/:id', Controller.Customers.getOne)
-router.get('/customers', Controller.Customers.getAll)
+// router.get('/customers', Controller.Customers.getAll)
 router.post('/customers', Controller.Customers.create)
 // router.patch('/customers' ) // DEV
 // router.delete('/customers/:id' ) // DEV
