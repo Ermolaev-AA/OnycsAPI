@@ -11,14 +11,14 @@ export const getClientMetadata = (req, res, next) => {
                (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '127.0.0.1'
 
-    console.log(req.headers)
-    console.log('Raw IP:', ip)
-    console.log('All headers:', {
-        'x-forwarded-for': req.headers['x-forwarded-for'],
-        'x-real-ip': req.headers['x-real-ip'],
-        'x-client-ip': req.headers['x-client-ip'],
-        'cf-connecting-ip': req.headers['cf-connecting-ip']
-    })
+    console.log(req.headers['x-client-ip'])
+    // console.log('Raw IP:', ip)
+    // console.log('All headers:', {
+    //     'x-forwarded-for': req.headers['x-forwarded-for'],
+    //     'x-real-ip': req.headers['x-real-ip'],
+    //     'x-client-ip': req.headers['x-client-ip'],
+    //     'cf-connecting-ip': req.headers['cf-connecting-ip']
+    // })
 
     // Очищаем IP
     let cleanIP = ip
@@ -80,17 +80,17 @@ export const getClientMetadata = (req, res, next) => {
     req.requestMethod = method
     
     // Логирование для отладки
-    console.log('Client Info:', {
-        IP: cleanIP,
-        UserAgent: userAgent,
-        Language: acceptLanguage,
-        Referer: referer,
-        URLParams: urlParams,
-        CookieString: cookieString,
-        Cookies: cookies,
-        Method: method,
-        Time: requestTime
-    })
+    // console.log('Client Info:', {
+    //     IP: cleanIP,
+    //     UserAgent: userAgent,
+    //     Language: acceptLanguage,
+    //     Referer: referer,
+    //     URLParams: urlParams,
+    //     CookieString: cookieString,
+    //     Cookies: cookies,
+    //     Method: method,
+    //     Time: requestTime
+    // })
     
     next()
 }
