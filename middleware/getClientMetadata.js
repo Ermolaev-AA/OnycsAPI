@@ -1,17 +1,23 @@
 export const getClientMetadata = (req, res, next) => {
-    // Получаем IP
-    const ip = req.ip || 
-               req.connection.remoteAddress || 
-               req.socket.remoteAddress ||
-               (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-               req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    // Получаем IP с правильным приоритетом для nginx
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
                req.headers['x-real-ip'] ||
                req.headers['x-client-ip'] ||
                req.headers['cf-connecting-ip'] || // Cloudflare
                req.headers['x-cluster-client-ip'] ||
+               req.ip || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress ||
+               (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '127.0.0.1'
 
-    console.log(ip)
+    console.log('Raw IP:', ip)
+    console.log('All headers:', {
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+        'x-client-ip': req.headers['x-client-ip'],
+        'cf-connecting-ip': req.headers['cf-connecting-ip']
+    })
 
     // Очищаем IP
     let cleanIP = ip
