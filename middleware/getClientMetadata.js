@@ -11,6 +11,8 @@ export const getClientMetadata = (req, res, next) => {
                req.headers['x-cluster-client-ip'] ||
                '127.0.0.1'
 
+    console.log(ip)
+
     // Очищаем IP
     let cleanIP = ip
     
