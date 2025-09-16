@@ -71,17 +71,17 @@ export const getClientMetadata = (req, res, next) => {
     req.requestMethod = method
     
     // Логирование для отладки
-    // console.log('Client Info:', {
-    //     IP: cleanIP,
-    //     UserAgent: userAgent,
-    //     Language: acceptLanguage,
-    //     Referer: referer,
-    //     URLParams: urlParams,
-    //     CookieString: cookieString,
-    //     Cookies: cookies,
-    //     Method: method,
-    //     Time: requestTime
-    // })
+    console.log('Client Info:', {
+        IP: cleanIP,
+        UserAgent: userAgent,
+        Language: acceptLanguage,
+        Referer: referer,
+        URLParams: urlParams,
+        CookieString: cookieString,
+        Cookies: cookies,
+        Method: method,
+        Time: requestTime
+    })
     
     next()
 }
