@@ -6,6 +6,8 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import router from './routers/router.js'
 
+import { getClientMetadata } from './middleware/getClientMetadata.js'
+
 dotenv.config()
 const PORT = process.env.PORT || 3000
 const DB_URL = process.env.MONGO_URI
@@ -15,8 +17,11 @@ const app = express()
 app.use(cors({
     origin: '*', // Разрешает доступ с любого домена
     methods: 'GET, POST, PUT, DELETE, OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization'
+    allowedHeaders: '*' // Разрешаем все заголовки
 }))
+
+app.set('trust proxy', true) // Добавляем эту строку
+app.use(getClientMetadata) // Добавляем middleware для IP
 
 app.use(express.json())
 app.use('/', router)

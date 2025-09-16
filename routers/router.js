@@ -10,19 +10,20 @@ router.post('/companies', Controller.Companies.create)
 // router.patch('/companies', Controller.Companies.update)
 // router.delete('/companies/:id', Controller.Companies.deleteOne)
 
-// Customers
-router.get('/customers/:id', Controller.Customers.getOne)
-// router.get('/customers', Controller.Customers.getAll)
-router.post('/customers', Controller.Customers.create)
-// router.patch('/customers' ) // DEV
-// router.delete('/customers/:id' ) // DEV
+// Customers (OLD)
+router.get('/customers/:id', Controller.Customers.getOne) // (OLD)
+// router.get('/customers', Controller.Customers.getAll) // (OLD)
+router.post('/customers', Controller.Customers.create) // (OLD)
 
-router.post('/customers/send/complaint', Controller.Customers.sendСomplaint)
-router.post('/customers/send/deal')
-router.post('/customers/send/newlead', Controller.Customers.sendNewlead)
+router.post('/customers/send/complaint', Controller.Customers.sendСomplaint) // (OLD)
+router.post('/customers/send/deal') // (OLD)
+router.post('/customers/send/newlead', Controller.Customers.sendNewlead) // (OLD)
 
 // DEL
-router.get('/customers/send/complaint', Controller.Customers.sendСomplaint)
+router.get('/customers/send/complaint', Controller.Customers.sendСomplaint) // (OLD)
+
+// Leads (Instead of Customers)
+router.post('/leads', Controller.Leads.create)
 
 // Deals
 router.get('/deals/get/report', Controller.Deals.getReport)
