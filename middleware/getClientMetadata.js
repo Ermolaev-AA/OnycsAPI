@@ -11,6 +11,7 @@ export const getClientMetadata = (req, res, next) => {
                (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
                '127.0.0.1'
 
+    console.log(req.headers)
     console.log('Raw IP:', ip)
     console.log('All headers:', {
         'x-forwarded-for': req.headers['x-forwarded-for'],
