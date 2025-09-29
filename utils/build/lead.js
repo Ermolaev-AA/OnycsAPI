@@ -151,12 +151,12 @@ function evaluateFraud({ globalDuplicates, localDuplicates, connectReport, conta
         result.reason.push('Invalid network type!')
     }
     if (country !== 'Russia') {
-        result.is_fraud = true
+        // result.is_fraud = true
         result.reason.push('Connection is not from Russia!')
     }
-    if (dupLast3m.length > 3) {
+    if (dupLast3m.length > 5) {
         result.is_fraud = true
-        result.reason.push('More than 3 duplicates in the last month!')
+        result.reason.push('More than 5 duplicates in the last month!')
     }
 
     return result

@@ -2,6 +2,7 @@ import Router from 'express'
 import Controller from '../controllers/index.js'
 
 const router = new Router
+// console.log(Controller)
 
 // Сompanies
 router.get('/companies/:id', Controller.Companies.getOne)
@@ -28,6 +29,9 @@ router.post('/leads', Controller.Leads.create)
 // Deals
 router.get('/deals/get/report', Controller.Deals.getReport)
 router.post('/deals/send/stage', Controller.Deals.sendStage)
+
+// CRM
+router.post('/crm', Controller.CRM.create)
 
 // GET
 router.get('/get/phone/report', Controller.getPhoneReport)
