@@ -46,7 +46,10 @@ export const getReport = async (data) => {
         })
 
         const [ deals, dealsWorking, dealsQualified, dealsMeetingAgencyScheduled, dealsMeeting, dealsMeetingDeveloperScheduled, dealsMeetingDeveloper, dealsReserved, dealsWon, dealsRegistrationCompleted, dealsCommissionReceived ] = await Promise.all([
-            ModelDeals.find(commonConditions('external_deal_created_at')),
+            ModelDeals.find({
+                ...commonConditions('external_deal_created_at'),
+                external_contact_created_at: { $gte: dateFrom, $lte: dateTo }
+            }),
             ModelDeals.find(commonConditions('working_at')),
             ModelDeals.find(commonConditions('qualified_at')),
             ModelDeals.find(commonConditions('meeting_agency_scheduled_at')),

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-const Customers = new mongoose.Schema(
+const Leads = new mongoose.Schema(
     {
         // ID и отношения
         _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
@@ -20,12 +20,9 @@ const Customers = new mongoose.Schema(
         // Duplicate
         is_local_duplicate: { type: Boolean, required: true, default: false },
         is_global_duplicate: { type: Boolean, required: true, default: false },
-        // Reports
-        // connect_report: { type: mongoose.Schema.Types.Mixed, default: {} },
-        // contact_report: { type: mongoose.Schema.Types.Mixed, default: {} },
-        // Metadata NEW
-        person_metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+        // Metadata
         network_metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+        person_metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
         fraud_metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
         // Жалобы 
         complaints: { type: Number, default: 0 }
@@ -35,9 +32,10 @@ const Customers = new mongoose.Schema(
     }
 )
 
-Customers.index({ phone: 1 }, { unique: true, partialFilterExpression: { is_global_duplicate: false } })
-Customers.index({ owner_id: 1, phone: 1 }, { unique: true, partialFilterExpression: { is_local_duplicate: false } })
+Leads.index({ phone: 1 }, { unique: true, partialFilterExpression: { is_global_duplicate: false } })
+Leads.index({ owner_id: 1, phone: 1 }, { unique: true, partialFilterExpression: { is_local_duplicate: false } })
 
+// Maybe delete it?
 Customers.post('save', async function (doc) {
     try {
         if (doc?.is_fraud === true) {
@@ -96,5 +94,6 @@ Customers.post(['save', 'findOneAndUpdate'], async function (doc) {
         { $set: { complaints } }
     )
 })
+// Maybe delete it?
 
-export default mongoose.model('Customers', Customers);
+export default mongoose.model('Leads', Leads)

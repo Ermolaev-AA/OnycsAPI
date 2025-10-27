@@ -5,15 +5,17 @@ import ModelCustomers from '../../models/customers.js'
 import ModelCompanies from '../../models/companies.js'
 
 import { getPhoneReport } from '../../services/get.js'
+import { defaultFraudRules } from '../../configs/defaultFraudRules.js'
 
 import Formatted from '../formatted/index.js'
 import Validation from '../validation/index.js'
+import { type } from 'os'
 
-const request = (req, settings = {}) => {
+export const request = (req, settings = {}) => {
     try {
         const { body, headers } = req
         const { source = 'create' } = settings // if more var...
-        const { data } = body
+        const { data, metadata } = body
 
         const name = body?.name || data?.name
         const phone = Formatted.phone(body?.phone) || Formatted.phone(data?.phone)
@@ -37,42 +39,76 @@ const request = (req, settings = {}) => {
 
         const params = req.objURLParams || body?.params
         const cookies = req.objCookies || body?.cookies
+
+        const captchaData = body?.captcha_data || data?.captcha_data || metadata?.captcha_data
+        const pageTime = body?.page_time || data?.page_time || metadata?.page_time
+        const focusTime = body?.focus_time || data?.focus_time || metadata?.focus_time
+
+        // Нужен валидатор правил
+        const fraudRules = body?.fraud_rules || data?.fraud_rules || metadata?.fraud_rules || defaultFraudRules
     
-        return { ownerID, name, phone, url, domain, params, cookies, userIP, userAgent }
+        return { ownerID, name, phone, url, domain, params, cookies, userIP, userAgent, captchaData, pageTime, focusTime, fraudRules }
     } catch (error) {
         if (!error.message) throw new Error('Unknown error occurred!')
         throw error
     }
 }
 
-const response = async (body) => {
+export const response = async (body) => {
     try {
-        const { name, phone, url, domain, params, cookies, userIP, userAgent } = body
+        const { name, phone, url, domain, params, cookies, userIP, userAgent, captchaData, pageTime, focusTime, fraudRules } = body
         const ownerID = body?.ownerID || await ModelCompanies.findOne({ domains: domain }).then(res => res._id) || '688b676870d49260494b5940'
 
         const orConditions = []
         const detailsIP = await getDetailsIP(userIP)
         const { octets } = detailsIP
         const incompleteIP = `${octets[0]}.${octets[1]}.${octets[2]}`
-        
+
         if (phone) orConditions.push({ phone: phone })
         if (params?.yclid) orConditions.push({ 'params.yclid': params.yclid })
         if (cookies?._ym_uid) orConditions.push({ 'cookies._ym_uid': cookies._ym_uid })
-        if (detailsIP?.network) orConditions.push({ 'connect_report.network': detailsIP.network })
-        if (incompleteIP) orConditions.push({ 'connect_report.user_ip': { $regex: incompleteIP, $options: 'i' } })
+        if (detailsIP?.network) orConditions.push({ 'connect_report.network': detailsIP.network }, { 'network_metadata.network': detailsIP.network })
+        if (incompleteIP) orConditions.push({ 'connect_report.user_ip': { $regex: incompleteIP, $options: 'i' } }, { 'network_metadata.user_ip': { $regex: incompleteIP, $options: 'i' } })
 
         if (orConditions.length === 0) throw new Error('The required «phone» parameter is missing!')
 
-        const globalDuplicates = await ModelCustomers.find({ $or: orConditions })
-        const localDuplicates = globalDuplicates.filter(duplicate => 
+        // На случай если не получится рабораться что тут за суета с массивами...
+        // В этой части кода образуются 4 массива с лидами filteredLeads, localFilteredLeads, globalDuplicates
+        // и localDuplicates. Каждый играет свою роль в проверке на фрод / не форд и дубль / не дубль.
+        // Ключивое отличе групп в жестко зафиксируемых параметрах на пользователе, то есть те парраметры,
+        // которые могут существовать только у одного рельного человека. filteredLeads и localFilteredLeads имеют
+        // в себе еще параметры которые необходимы для проверки но фактически не относят пользователя к дублю (это network и user_ip),
+        // эти данные необходимы для проверки времени жизни IP адресов и сетей в процессе определения мошенеческих действий (фрод / не фрод)
+        // Парраметры которые определяют реальные дубли phone, yclid, _ym_uid (в будущем мб появяться еще куки и параметры), иммено эти 
+        // данные могут существовать внутри одного пользователя то есть массывы globalDuplicates или localDuplicates
+
+        // console.log({ $or: orConditions })
+
+        const filteredLeads = await ModelCustomers.find({ $or: orConditions })
+        const localFilteredLeads = filteredLeads.filter(duplicate => 
             duplicate.owner_id.toString() === ownerID.toString()
+        )
+
+        const globalDuplicates = filteredLeads.filter(duplicate => 
+            (phone && duplicate.phone === phone) ||
+            (params?.yclid && duplicate.params?.yclid === params.yclid) ||
+            (cookies?._ym_uid && duplicate.cookies?._ym_uid === cookies._ym_uid)
+        )
+        
+        const localDuplicates = localFilteredLeads.filter(duplicate => 
+            (phone && duplicate.phone === phone) ||
+            (params?.yclid && duplicate.params?.yclid === params.yclid) ||
+            (cookies?._ym_uid && duplicate.cookies?._ym_uid === cookies._ym_uid)
         )
 
         const isLocalDuplicate  = Boolean(localDuplicates.length)
         const isGlobalDuplicate = Boolean(globalDuplicates.length)
 
-        const contactReport = await getPhoneReport(phone)
-        const connectReport = {
+        // console.log(localDuplicates.length)
+        // console.log(globalDuplicates.length)
+
+        const personMetadata = await getPhoneReport(phone)
+        const networkMetadata = {
             user_ip: userIP,
             user_agent: userAgent,
             network_type: detailsIP.type,
@@ -87,26 +123,27 @@ const response = async (body) => {
             // ipqs_report: await ServiceIPQS.getReport(userIP), // (OLD)
         }
 
-        const resEvaluateFraud = evaluateFraud({ globalDuplicates, localDuplicates, connectReport, contactReport })
+        const fraudData = { filteredLeads, localFilteredLeads, globalDuplicates, localDuplicates, captchaData, pageTime, focusTime, networkMetadata, personMetadata }
+        const fraudMetadata = evaluateFraud(fraudData, fraudRules)
+
+        // console.log(fraudMetadata)
 
         const response = {
-            lead: {
-                owner_id: ownerID,
-                name,
-                phone,
-                url,
-                domain,
-                params,
-                cookies,
-                is_fraud: resEvaluateFraud.is_fraud,
-                is_local_duplicate: isLocalDuplicate,
-                is_global_duplicate: isGlobalDuplicate,
-                connect_report: connectReport,
-                contact_report: contactReport,
-            },
-            local_duplicates: localDuplicates,
-            global_duplicates: globalDuplicates,
-            evaluate_fraud: resEvaluateFraud,
+            owner_id: ownerID,
+            name,
+            phone,
+            url,
+            domain,
+            params,
+            cookies,
+            is_fraud: fraudMetadata.is_fraud,
+            is_local_duplicate: isLocalDuplicate,
+            is_global_duplicate: isGlobalDuplicate,
+            // connect_report: networkMetadata, // DEL
+            // contact_report: personMetadata, // DEL
+            person_metadata: personMetadata,
+            network_metadata: networkMetadata,
+            fraud_metadata: fraudMetadata
         }
 
         return response
@@ -116,48 +153,129 @@ const response = async (body) => {
     }
 }
 
-export default { request, response }
-
-
 // Надо перенести
-function evaluateFraud({ globalDuplicates, localDuplicates, connectReport, contactReport }) {
-    let result = { is_fraud: false, reason: [] }
+function evaluateFraud(data, rules) {
+    const { filteredLeads, localFilteredLeads, globalDuplicates, localDuplicates, captchaData, pageTime, focusTime, networkMetadata, personMetadata } = data
 
-    const wa = contactReport?.whatsapp_exists || false
-    const dupWithSameNetwork = globalDuplicates.find( duplicate => duplicate.connect_report?.network === connectReport?.network )
-    const dupWithSameUserIP = globalDuplicates.find( duplicate => duplicate.connect_report?.user_ip === connectReport?.user_ip )
-    const networkType = connectReport?.network_type
-    const country = connectReport?.country || 'Russia'
+    const localDuplicatesTTLDate = new Date(Date.now() - rules?.local_duplicates_allowed?.ttl)
+    const localDuplicatesTTLArr = localDuplicates.filter(lead => lead.createdAt >= localDuplicatesTTLDate)
+    const localDuplicatesExists = localDuplicatesTTLArr.length > rules?.local_duplicates_allowed?.quantity
 
-    const currDate = new Date()
-    const threeMonthsAgo = new Date(currDate.getTime())
-    threeMonthsAgo.setMonth(currDate.getMonth() - 1)
-    
-    const dupLast3m = localDuplicates.filter(duplicate => {
-        const createdAt = new Date(duplicate.createdAt)
-        return createdAt >= threeMonthsAgo
-    })
+    const globalDuplicatesTTLDate = new Date(Date.now() - rules?.global_duplicates_allowed?.ttl)
+    const globalDuplicatesTTLArr = globalDuplicates.filter(lead => lead.createdAt >= globalDuplicatesTTLDate)
+    const globalDuplicatesExists = globalDuplicatesTTLArr.length > rules?.global_duplicates_allowed?.quantity
 
-    if (wa === false) {
-        result.is_fraud = true 
-        result.reason.push('Whatsapp does not exist!')
+    const ipUniqueTTLDate = new Date(Date.now() - rules?.ip_unique_ttl)
+    const ipUniqueTTLArr = localFilteredLeads.filter(lead => 
+        (lead.network_metadata?.user_ip === networkMetadata.user_ip || lead.connect_report?.user_ip === networkMetadata.user_ip) && 
+        (lead.createdAt >= ipUniqueTTLDate)
+    )
+    const ipUniqueExists = ipUniqueTTLArr.length > 0
+
+    const networkUniqueTTLDate = new Date(Date.now() - rules?.network_unique_ttl)
+    const networkUniqueTTLArr = localFilteredLeads.filter(lead => 
+        (lead.network_metadata?.network === networkMetadata.network || lead.connect_report?.network === networkMetadata.network) && 
+        (lead.createdAt >= networkUniqueTTLDate)
+    )
+    const networkUniqueExists = networkUniqueTTLArr.length > 0
+
+    // console.log('localDuplicatesExists', localDuplicatesExists)
+    // console.log('globalDuplicatesExists', globalDuplicatesExists)
+    // console.log('ipUniqueExists', ipUniqueExists)
+    // console.log('networkUniqueExists', networkUniqueExists)
+
+    let result = { 
+        is_fraud: null, 
+        verify_enabled: null,
+        verify_success: null,
+        rules: rules,
+        verify: [
+            {
+                name: 'captcha',
+                type: captchaData?.type,
+                enabled: rules?.captcha_required,
+                success: captchaData?.success === true,
+                error_reason: 'Captcha verification failed!'
+            },
+            {
+                name: 'network_type',
+                enabled: rules?.valid_ip_required,
+                success: networkMetadata?.network_type === 'IPv4',
+                error_reason: 'The network type is not valid!'
+            },
+            {
+                name: 'whatsapp',
+                enabled: rules?.whatsapp_required,
+                success: personMetadata?.whatsapp_exists === true,
+                error_reason: 'Whatsapp does not exist!'
+            },
+            {
+                name: 'telegram',
+                enabled: rules?.telegram_required,
+                success: personMetadata?.telegram_exists === true,
+                error_reason: 'Telegram does not exist!'
+            },
+            {
+                name: 'page_time',
+                enabled: rules?.page_time > 0,
+                success: pageTime > rules?.page_time,
+                error_reason: 'page_time'
+            },
+            {
+                name: 'focus_time',
+                enabled: rules?.focus_time > 0,
+                success: focusTime > rules?.focus_time,
+                error_reason: 'focus_time'
+            },
+            {
+                name: 'local_duplicates',
+                enabled: rules?.local_duplicates_allowed != null,
+                success: localDuplicatesExists === false,
+                id_duplicates: localDuplicatesTTLArr.map(lead => lead._id),
+                error_reason: 'local_duplicates'
+            },
+            {
+                name: 'global_duplicates',
+                enabled: rules?.global_duplicates_allowed != null,
+                success: globalDuplicatesExists === false,
+                id_duplicates: globalDuplicatesTTLArr.map(lead => lead._id),
+                error_reason: 'global_duplicates'
+            },
+            {
+                name: 'ip_unique',
+                enabled: rules?.ip_unique_ttl > 0,
+                success: ipUniqueExists === false,
+                id_duplicates: ipUniqueTTLArr.map(lead => lead._id),
+                error_reason: 'ip_unique'
+            },
+            {
+                name: 'network_unique',
+                enabled: rules?.network_unique_ttl > 0,
+                success: networkUniqueExists === false,
+                id_duplicates: networkUniqueTTLArr.map(lead => lead._id),
+                error_reason: 'network_unique'
+            },
+            {
+                name: 'geo_whitelist',
+                enabled: rules?.geo_whitelist?.length > 0,
+                success: rules?.geo_whitelist?.includes(networkMetadata?.country_code),
+                error_reason: 'geo_whitelist'
+            }
+        ],
+        error_reason: [] 
     }
-    if (dupWithSameNetwork || dupWithSameUserIP) {
-        result.is_fraud = true 
-        result.reason.push('There is a network duplicate!')
-    }
-    if (networkType !== 'IPv4') {
-        result.is_fraud = true 
-        result.reason.push('Invalid network type!')
-    }
-    if (country !== 'Russia') {
-        // result.is_fraud = true
-        result.reason.push('Connection is not from Russia!')
-    }
-    if (dupLast3m.length > 5) {
-        result.is_fraud = true
-        result.reason.push('More than 5 duplicates in the last month!')
-    }
+
+    const verifyEnabledArr = result.verify.filter(conditions => conditions.enabled === true)
+    const verifySuccessArr = verifyEnabledArr.filter(conditions => conditions.success === true)
+    const ifFraud = (verifySuccessArr.length >= verifyEnabledArr.length) && (verifySuccessArr.length > rules.allowed_failures)
+
+    result.is_fraud = !ifFraud
+    result.verify_enabled = verifyEnabledArr.length
+    result.verify_success = verifySuccessArr.length
+
+    verifyEnabledArr.forEach(verify => { if (verify.success === false) result.error_reason.push(verify.error_reason) })
+
+    // console.log(result)
 
     return result
 }

@@ -25,6 +25,7 @@ router.get('/customers/send/complaint', Controller.Customers.sendСomplaint) // 
 
 // Leads (Instead of Customers)
 router.post('/leads', Controller.Leads.create)
+router.post('/leads/verify-captcha', Controller.Leads.verifyCaptcha)
 
 // Deals
 router.get('/deals/get/report', Controller.Deals.getReport)
